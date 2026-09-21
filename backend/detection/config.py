@@ -84,3 +84,11 @@ class VideoDetectionConfig:
     max_file_bytes: int = 500_000_000
     representative_frame_count: int = 3
     corroboration_bonus: float = 5.0
+
+
+@dataclass(frozen=True, slots=True)
+class AiReasoningConfig:
+    """Provider-neutral AI enrichment settings; no provider is enabled by default."""
+
+    enabled: bool = False
+    reasoning_version: str = "1.0"

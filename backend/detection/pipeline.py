@@ -1,6 +1,7 @@
 """Routing layer between normalized inputs and modality detectors."""
 
 from .audio_detector import AudioDetector
+from .ai_analyzer import AIReasoner
 from .detector import Detector
 from .image_detector import ImageDetector
 from .schemas import InputType, ScanRequest, ScanResult
@@ -12,7 +13,7 @@ from .video_detector import VideoDetector
 class DetectionPipeline:
     """Routes each request to the detector registered for its modality."""
 
-    def __init__(self, detectors: dict[InputType, Detector] | None = None) -> None:
+    def __init__(self, detectors: dict[InputType, Detector] | None = None, ai_reasoner: AIReasoner | None = None) -> None:
         self._detectors: dict[InputType, Detector] = detectors or {
             InputType.TEXT: TextDetector(),
             InputType.URL: UrlDetector(),
@@ -20,9 +21,10 @@ class DetectionPipeline:
             InputType.AUDIO: AudioDetector(),
             InputType.VIDEO: VideoDetector(),
         }
+        self._ai_reasoner = ai_reasoner or AIReasoner()
 
     def scan(self, request: ScanRequest) -> ScanResult:
-        return self.detector_for(request.input_type).detect(request)
+        return self._ai_reasoner.enrich(self.detector_for(request.input_type).detect(request))
 
     def detector_for(self, input_type: InputType) -> Detector:
         """Return the configured detector for an input modality."""

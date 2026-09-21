@@ -60,3 +60,81 @@ Classification favors URL, email, IPv4, hash, phone, then domain, so a URL or
 email is not reduced to a domain. The extractor skips known non-IOC entity types
 and requires strict validation, which intentionally favors avoiding false
 positives. Extraction supplies no reputation or maliciousness judgment.
+
+## VirusTotal provider
+
+`backend.intelligence.virustotal.VirusTotalProvider` performs synchronous
+VirusTotal v3 lookups for hash (`/files/{hash}`), domain (`/domains/{domain}`),
+IPv4 (`/ip_addresses/{ip}`), and URL (`/urls/{base64url-id}`) indicators. URL
+lookups use the base64url encoding of the normalized URL with trailing `=`
+padding removed; the provider never submits URLs for scanning.
+
+The provider reads `VIRUSTOTAL_API_KEY` through the existing settings layer, or
+accepts a supplied key for application wiring. Email, phone, and other indicators
+return `unavailable` without making a request. Missing keys, rate limits,
+timeouts, connection failures, and malformed responses are also never benign.
+
+For a successful response, nonzero `malicious` analysis statistics map to
+`malicious`, then nonzero `suspicious` maps to `suspicious`. Explicit nonzero
+`harmless` evidence with neither maps to `benign`; all-zero statistics map to
+`unknown`, not benign. A 404 is a successful lookup with `unknown` reputation;
+authentication, request, and server failures use `error` or `unavailable` with
+`unavailable` reputation. Only normalized counts, an optional provider reference,
+and a structured summary are retained—never the full provider response.
+
+## Community-intelligence provider boundary
+
+No concrete community-intelligence source is currently configured or specified
+by this repository. `backend.intelligence.community.CommunityIntelProvider`
+therefore exposes the common `lookup(indicator)` interface but makes no HTTP or
+external-service call. It returns a provider-neutral `ThreatIntelResult` with
+source `community_intelligence`, status `unavailable`, and reputation
+`unavailable` for every indicator type.
+
+This explicitly means community enrichment has not been performed; it is never a
+benign verdict. A future configured source can replace this safe implementation
+behind the same interface, using the existing `ThreatIntelResult` and
+`ThreatIntelFinding` contracts without exposing provider-specific payloads.
+
+## Threat-intelligence aggregation
+
+`aggregate_threat_intelligence(indicators, provider_results)` returns one
+provider-neutral `ThreatIntelResult` with source `threat_intelligence_aggregator`
+for each unique normalized `(indicator type, indicator value)` supplied in
+`indicators`. It can be placed directly in `EnrichedThreatResult.threat_intelligence`.
+Provider results without a matching input indicator are ignored rather than being
+attached arbitrarily.
+
+The aggregate retains each provider result as a provider-status/reputation
+summary and preserves its distinct findings. Exact duplicate provider results and
+exact duplicate findings are removed using stable JSON representations. When
+usable providers report different non-neutral reputations, the aggregate adds a
+`reputation_conflict` finding without claiming that either provider is correct.
+
+Among `success` and `partial` provider results, reputation is selected in this
+order: `malicious`, `suspicious`, `benign`, then `unknown`. Thus stronger adverse
+evidence wins while a benign result is used only when no malicious or suspicious
+evidence exists. `unknown` and `unavailable` never produce benign. With no usable
+provider result, including no results or all unavailable providers, the aggregate
+is `unavailable`; a usable provider result with no usable reputation remains
+`unknown`. Aggregate status is `success` if any provider succeeded, otherwise
+`partial` if any was partial, `unavailable` when all are unavailable (or none
+were supplied), and `error` for remaining all-error/mixed-error cases.
+
+## Evidence packaging
+
+`backend.incidents.evidence.build_evidence_pack(scan_result, indicators,
+threat_intelligence)` creates an `EvidencePack` without provider calls, database
+access, or extraction. It composes a deep-copied `ScanResult` with a newly built
+`EnrichedThreatResult`, preserving original input/reference, risk, severity,
+confidence, threat type, signals, explanation, entities, recommendation,
+provenance, normalized indicators, and all provider-neutral intelligence
+findings exactly as supplied.
+
+The pack's `scan_id` is copied from `ScanResult.scan_id`; the nested contracts
+enforce that same identity. The current `Indicator` and `ThreatIntelResult`
+contracts carry no scan ID, so no additional identity is invented or rewritten.
+Collection time is UTC and timezone-aware (or may be supplied as an aware time
+for deterministic use); it is distinct from the original scan timestamp. The
+builder deep-copies caller-owned models and lists, so later mutations do not
+change the packaged snapshot. It does not reinterpret reputation or severity.

@@ -1,4 +1,6 @@
 # TruthLensAI
+AI-powered multimodal threat detection and response platform
+# TruthLensAI
 
 TruthLensAI is an AI-powered multimodal threat detection and response platform for assessing text, URLs/domains, images/screenshots, audio/voice, and video.
 

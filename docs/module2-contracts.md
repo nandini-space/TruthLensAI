@@ -138,3 +138,18 @@ Collection time is UTC and timezone-aware (or may be supplied as an aware time
 for deterministic use); it is distinct from the original scan timestamp. The
 builder deep-copies caller-owned models and lists, so later mutations do not
 change the packaged snapshot. It does not reinterpret reputation or severity.
+
+## Incident management
+
+`backend.incidents.manager.create_incident(evidence_pack)` validates and
+deep-copies an `EvidencePack`, then creates an `Incident` with the same scan ID,
+the evidence ID as `evidence_reference`, and threat type/risk/severity/confidence
+from the nested scan result. New incidents always start `open`. The incident ID
+is deterministically derived from the evidence ID; no persistence is performed.
+
+`update_incident_status(incident, status)` is a side-effect-free lifecycle
+operation. Only `open → investigating` and `investigating → resolved` are valid;
+same-state, skipped, and reopening transitions raise `ValueError`. Creation and
+update timestamps are timezone-aware UTC and separate from detection/evidence
+timestamps. Detection severity remains unchanged and independent of incident
+lifecycle status.

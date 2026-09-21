@@ -74,3 +74,13 @@ class AudioDetectionConfig:
     transcription_model_path: str | None = None
     transcription_device: str = "cpu"
     transcription_compute_type: str = "int8"
+
+
+@dataclass(frozen=True, slots=True)
+class VideoDetectionConfig:
+    """Local video validation and bounded representative-media extraction settings."""
+
+    allowed_formats: frozenset[str] = frozenset({"MP4", "AVI", "MOV", "MKV", "WEBM"})
+    max_file_bytes: int = 500_000_000
+    representative_frame_count: int = 3
+    corroboration_bonus: float = 5.0

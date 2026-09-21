@@ -1,6 +1,7 @@
 """Detection-engine configuration boundary; provider settings are deferred."""
 
 from dataclasses import dataclass, field
+import os
 
 
 @dataclass(frozen=True, slots=True)
@@ -8,6 +9,19 @@ class DetectionConfig:
     """Non-secret configuration owned by the detection pipeline."""
 
     contract_version: str = "1.0"
+
+
+@dataclass(frozen=True, slots=True)
+class ApiConfig:
+    """Environment-backed settings for the thin HTTP API boundary."""
+
+    cors_origins: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            origin.strip()
+            for origin in os.getenv("TRUTHLENS_CORS_ORIGINS", "").split(",")
+            if origin.strip()
+        )
+    )
 
 
 @dataclass(frozen=True, slots=True)

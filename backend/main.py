@@ -1,9 +1,3 @@
-from fastapi import FastAPI
+"""Backward-compatible ASGI entry point for the detection API."""
 
-
-app = FastAPI(title="TruthLensAI")
-
-
-@app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok", "service": "TruthLensAI"}
+from backend.api.main import app

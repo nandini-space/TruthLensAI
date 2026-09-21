@@ -62,3 +62,15 @@ class ImageDetectionConfig:
     allowed_formats: frozenset[str] = frozenset({"PNG", "JPEG", "WEBP"})
     max_file_bytes: int = 10_000_000
     max_pixels: int = 20_000_000
+
+
+@dataclass(frozen=True, slots=True)
+class AudioDetectionConfig:
+    """Local audio validation and transcription settings."""
+
+    allowed_formats: frozenset[str] = frozenset({"WAV", "MP3", "M4A", "FLAC"})
+    max_file_bytes: int = 100_000_000
+    # A local path is deliberate: the detector must not download a model at scan time.
+    transcription_model_path: str | None = None
+    transcription_device: str = "cpu"
+    transcription_compute_type: str = "int8"

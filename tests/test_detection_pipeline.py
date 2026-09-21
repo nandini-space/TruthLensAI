@@ -19,8 +19,8 @@ class PipelineRoutingTests(unittest.TestCase):
                     self.assertEqual(result.threat_type, ThreatType.BENIGN)
                     self.assertEqual(result.severity, Severity.LOW)
                     self.assertEqual(result.metadata["assessment_status"], "completed")
-                elif input_type is InputType.IMAGE:
-                    self.assertEqual(result.input_type, InputType.IMAGE)
+                elif input_type in {InputType.IMAGE, InputType.AUDIO}:
+                    self.assertEqual(result.input_type, input_type)
                     self.assertEqual(result.threat_type, ThreatType.UNKNOWN)
                     self.assertEqual(result.metadata["assessment_status"], "invalid_input")
                 else:

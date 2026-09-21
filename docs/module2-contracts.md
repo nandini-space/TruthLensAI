@@ -153,3 +153,19 @@ same-state, skipped, and reopening transitions raise `ValueError`. Creation and
 update timestamps are timezone-aware UTC and separate from detection/evidence
 timestamps. Detection severity remains unchanged and independent of incident
 lifecycle status.
+
+## Forensic report generation
+
+`backend.reports.forensic.build_forensic_report(incident, evidence_pack)`
+creates a validated, deep-copied `ForensicReport` snapshot. The incident and
+evidence must share a scan ID; when the incident has an embedded evidence pack
+or evidence reference, it must identify the supplied evidence pack. Mismatches
+raise `ValueError` and are never repaired.
+
+The builder preserves the scan's threat/risk/severity/confidence, original input
+reference, signals, explanation, recommendation, indicators, and threat
+intelligence, including unknown and unavailable results. The incident lifecycle
+state is retained in the nested incident without a transition. Report generation
+is deterministic, side-effect free, and uses an independent UTC-aware generation
+timestamp (optionally supplied for deterministic callers); it performs no
+detection, intelligence query, lifecycle update, or response action.

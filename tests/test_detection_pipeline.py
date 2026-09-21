@@ -15,6 +15,10 @@ class PipelineRoutingTests(unittest.TestCase):
                     self.assertEqual(result.threat_type, ThreatType.BENIGN)
                     self.assertEqual(result.severity, Severity.LOW)
                     self.assertEqual(result.metadata["assessment_status"], "completed")
+                elif input_type is InputType.URL:
+                    self.assertEqual(result.threat_type, ThreatType.BENIGN)
+                    self.assertEqual(result.severity, Severity.LOW)
+                    self.assertEqual(result.metadata["assessment_status"], "completed")
                 else:
                     self.assertEqual(result.threat_type, ThreatType.UNKNOWN)
                     self.assertEqual(result.severity, Severity.UNKNOWN)

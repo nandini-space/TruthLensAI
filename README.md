@@ -34,3 +34,7 @@ uvicorn backend.main:app --reload
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the intended system boundaries.
+
+## Local image OCR
+
+Image detection accepts local PNG, JPEG, and WEBP file paths. It uses Pillow plus the `pytesseract` Python wrapper. Running actual OCR also requires the local [Tesseract OCR executable](https://github.com/tesseract-ocr/tesseract); when it is unavailable, image scans return a typed unassessed result instead of inferred text.

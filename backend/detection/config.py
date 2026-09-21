@@ -53,3 +53,12 @@ class UrlRiskConfig:
     moderate_threshold: int = 15
     high_threshold: int = 40
     critical_threshold: int = 70
+
+
+@dataclass(frozen=True, slots=True)
+class ImageDetectionConfig:
+    """Local image validation limits for the OCR pipeline."""
+
+    allowed_formats: frozenset[str] = frozenset({"PNG", "JPEG", "WEBP"})
+    max_file_bytes: int = 10_000_000
+    max_pixels: int = 20_000_000

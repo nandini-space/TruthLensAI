@@ -92,3 +92,13 @@ class AiReasoningConfig:
 
     enabled: bool = False
     reasoning_version: str = "1.0"
+
+
+@dataclass(frozen=True, slots=True)
+class MultimodalFusionConfig:
+    """Bounded deterministic corroboration settings for existing detector results."""
+
+    corroboration_bonus_per_modality: float = 5.0
+    max_corroboration_bonus: float = 15.0
+    confidence_bonus_per_modality: float = 0.05
+    fusion_version: str = "1.0"

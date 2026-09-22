@@ -1,6 +1,7 @@
-# TruthLensAI Telegram Bot (Module 3C-2)
+# TruthLensAI Telegram Bot prototype/reference (Module 3C-2)
 
-This is the initial Telegram UI for TruthLensAI. Its polling implementation
+This is an isolated local prototype/reference implementation. Production
+Telegram UI and update consumption belong to the n8n workflow. Its polling implementation
 provides a welcome/menu flow and input-type selection prototype; it does not
 scan content or contact Module 1, Module 2, or any TruthLensAI backend API.
 
@@ -52,16 +53,17 @@ Scan history, Telegram media handling, backend calls, Module 1 scans, Module 2
 investigations, feedback actions, and real response actions are intentionally
 not implemented in this bot process.
 
-## Task 3C-3 n8n mock workflow
+## Task 3C-4 n8n Module 1 workflow
 
 The importable mock workflow is at
 [`n8n/workflows/truthlens_module_3c_mock.json`](../../n8n/workflows/truthlens_module_3c_mock.json).
-It supports Telegram -> n8n -> mock normalized response -> Telegram for text,
-URLs, image, audio, and video updates. It makes no backend request and performs
-no media download or scanning. See its
+It supports Telegram -> n8n -> Module 1 -> normalized response -> Telegram for
+text and URLs when real mode is enabled, while retaining a configurable offline
+mock mode. Image, audio, and video are recognized but not sent to Module 1 in
+this task. See its
 [workflow instructions](../../n8n/workflows/README.md) for n8n credentials,
 import, activation, and test cases.
 
-Do not run this Python polling bot and the n8n Telegram Trigger with the same
-bot token at the same time: Telegram permits only one active update consumer.
-Use a separate test bot, or stop polling before activating the n8n workflow.
+Never run this Python polling bot and the production n8n Telegram Trigger with
+the same bot token: Telegram permits only one active update consumer. Use a
+separate test bot for this prototype, or stop it before activating n8n.

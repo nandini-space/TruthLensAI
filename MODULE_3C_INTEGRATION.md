@@ -2,6 +2,10 @@
 
 ## Scope
 
+**Production Telegram update owner: n8n.** The Python package under
+module_3c/telegram_bot is an offline prototype/reference implementation and
+must not poll the same bot token as the n8n Telegram Trigger.
+
 Module 3C is the Telegram/n8n adapter. It submits user content to the existing
 HTTP API, translates API responses to the stable envelope below, and renders
 that envelope in Telegram. It does not import backend classes, run detection,

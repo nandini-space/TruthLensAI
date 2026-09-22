@@ -1,12 +1,3 @@
-from fastapi import FastAPI
+"""Backward-compatible ASGI entry point for the TruthLensAI API."""
 
-from backend.api.module2 import router as module2_router
-
-
-app = FastAPI(title="TruthLensAI")
-app.include_router(module2_router)
-
-
-@app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok", "service": "TruthLensAI"}
+from backend.api.main import app

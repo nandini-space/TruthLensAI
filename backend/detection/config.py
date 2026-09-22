@@ -1,6 +1,7 @@
 """Detection-engine configuration boundary; provider settings are deferred."""
 
 from dataclasses import dataclass, field
+import os
 
 
 @dataclass(frozen=True, slots=True)
@@ -8,6 +9,19 @@ class DetectionConfig:
     """Non-secret configuration owned by the detection pipeline."""
 
     contract_version: str = "1.0"
+
+
+@dataclass(frozen=True, slots=True)
+class ApiConfig:
+    """Environment-backed settings for the thin HTTP API boundary."""
+
+    cors_origins: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            origin.strip()
+            for origin in os.getenv("TRUTHLENS_CORS_ORIGINS", "").split(",")
+            if origin.strip()
+        )
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,3 +88,31 @@ class AudioDetectionConfig:
     transcription_model_path: str | None = None
     transcription_device: str = "cpu"
     transcription_compute_type: str = "int8"
+
+
+@dataclass(frozen=True, slots=True)
+class VideoDetectionConfig:
+    """Local video validation and bounded representative-media extraction settings."""
+
+    allowed_formats: frozenset[str] = frozenset({"MP4", "AVI", "MOV", "MKV", "WEBM"})
+    max_file_bytes: int = 500_000_000
+    representative_frame_count: int = 3
+    corroboration_bonus: float = 5.0
+
+
+@dataclass(frozen=True, slots=True)
+class AiReasoningConfig:
+    """Provider-neutral AI enrichment settings; no provider is enabled by default."""
+
+    enabled: bool = False
+    reasoning_version: str = "1.0"
+
+
+@dataclass(frozen=True, slots=True)
+class MultimodalFusionConfig:
+    """Bounded deterministic corroboration settings for existing detector results."""
+
+    corroboration_bonus_per_modality: float = 5.0
+    max_corroboration_bonus: float = 15.0
+    confidence_bonus_per_modality: float = 0.05
+    fusion_version: str = "1.0"

@@ -4,6 +4,9 @@ import { useState } from "react";
 import { investigate, Module2ApiError } from "../../lib/module2-client";
 import type { Module2Result } from "../../lib/module2-types";
 import { demoScanResult } from "./demo-scan";
+import { EvidencePanel } from "./EvidencePanel";
+import { IndicatorList } from "./IndicatorList";
+import { ThreatIntelligencePanel } from "./ThreatIntelligencePanel";
 
 const format = (value: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(value);
 
@@ -11,7 +14,7 @@ function EmptyState({ children }: { children: React.ReactNode }) { return <p cla
 function Section({ title, children }: { title: string; children: React.ReactNode }) { return <section className="panel"><h2>{title}</h2>{children}</section>; }
 
 export function InvestigationResults({ result }: { result: Module2Result }) {
-  const { incident, evidence_pack: evidence, threat_intelligence: intelligence, forensic_report: report } = result;
+  const { incident, evidence_pack: evidence, forensic_report: report } = result;
   return <div className="results">
     <Section title="Investigation summary">
       <dl className="summary-grid">
@@ -24,12 +27,9 @@ export function InvestigationResults({ result }: { result: Module2Result }) {
       </dl>
       <p>{result.scan_result.explanation}</p>
     </Section>
-    <Section title="Evidence">
-      {evidence ? <dl className="detail-list"><div><dt>Evidence ID</dt><dd className="mono">{evidence.evidence_id}</dd></div><div><dt>Collected</dt><dd>{evidence.collected_at}</dd></div><div><dt>Input reference</dt><dd className="mono">{evidence.scan_result.input_reference.reference_uri ?? evidence.scan_result.input_reference.original_content ?? "No input reference returned."}</dd></div><div><dt>Signals</dt><dd>{evidence.scan_result.signals.length ? evidence.scan_result.signals.map((signal) => `${signal.name}: ${signal.value}`).join("; ") : "No detection signals returned."}</dd></div></dl> : <EmptyState>No evidence pack was returned.</EmptyState>}
-    </Section>
-    <Section title="Threat intelligence">
-      {!intelligence.length ? <EmptyState>No intelligence results were returned. This may mean no eligible indicators were found or providers were unavailable.</EmptyState> : <div className="table-wrap"><table><thead><tr><th>Indicator</th><th>Reputation</th><th>Status</th><th>Source</th><th>Findings</th></tr></thead><tbody>{intelligence.map((item) => <tr key={`${item.indicator.indicator_id}-${item.source}`}><td className="mono">{item.indicator.value}</td><td><span className={`badge reputation-${item.reputation}`}>{item.reputation}</span></td><td>{item.status}</td><td>{item.source}</td><td>{item.findings.length ? item.findings.map((finding) => finding.description).join(" ") : "No findings returned."}</td></tr>)}</tbody></table></div>}
-    </Section>
+    <EvidencePanel evidence={evidence} />
+    <ThreatIntelligencePanel intelligence={result.threat_intelligence} />
+    <Section title="Indicators"><IndicatorList indicators={result.indicators} /></Section>
     <Section title="Response actions">
       {!result.response_decisions.length && !result.action_records.length ? <EmptyState>No response decisions or action records were returned.</EmptyState> : <ul className="records">{result.response_decisions.map((decision, index) => <li key={`${decision.indicator_value}-${index}`}><strong>{decision.action}</strong> · {decision.indicator_type}: <span className="mono">{decision.indicator_value}</span><br /><span>{decision.reason} ({decision.mode})</span></li>)}{result.action_records.map((record) => <li key={record.action_id}><strong>{record.status}</strong> · {record.action} for <span className="mono">{record.indicator.value}</span><br /><span>Dry run: {record.mode}; executed: {String(record.executed)}.</span></li>)}</ul>}
     </Section>

@@ -6,6 +6,12 @@ export class Module2ApiError extends Error {
 
 const apiBaseUrl = () => (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 
+function errorDetail(payload: unknown, fallback: string): string {
+  if (!payload || typeof payload !== "object" || !("detail" in payload)) return fallback;
+  const detail = (payload as { detail?: unknown }).detail;
+  return typeof detail === "string" && detail.trim() ? detail : fallback;
+}
+
 function isModule2Result(value: unknown): value is Module2Result {
   if (!value || typeof value !== "object") return false;
   const result = value as Partial<Module2Result>;
@@ -16,7 +22,9 @@ function isInvestigationPage(value: unknown): value is Module2InvestigationPage 
   if (!value || typeof value !== "object") return false;
   const page = value as Partial<Module2InvestigationPage>;
   return Array.isArray(page.items) && page.items.every(isModule2Result)
-    && typeof page.limit === "number" && typeof page.offset === "number" && typeof page.count === "number";
+    && typeof page.limit === "number" && Number.isInteger(page.limit) && page.limit >= 0
+    && typeof page.offset === "number" && Number.isInteger(page.offset) && page.offset >= 0
+    && typeof page.count === "number" && Number.isInteger(page.count) && page.count >= 0;
 }
 
 async function getPayload(path: string, fetcher: typeof fetch): Promise<unknown> {
@@ -25,8 +33,7 @@ async function getPayload(path: string, fetcher: typeof fetch): Promise<unknown>
   catch { throw new Module2ApiError("Unable to reach the investigation service. Check the API URL and try again."); }
   const payload: unknown = await response.json().catch(() => undefined);
   if (!response.ok) {
-    const detail = payload && typeof payload === "object" && "detail" in payload ? String(payload.detail) : "The investigation request failed.";
-    throw new Module2ApiError(detail, response.status);
+    throw new Module2ApiError(errorDetail(payload, "The investigation request failed."), response.status);
   }
   return payload;
 }
@@ -35,7 +42,9 @@ export async function listInvestigations(
   { limit = 20, offset = 0 }: { limit?: number; offset?: number } = {},
   fetcher: typeof fetch = fetch,
 ): Promise<Module2InvestigationPage> {
-  const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  const safeLimit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 20;
+  const safeOffset = Number.isInteger(offset) ? Math.max(offset, 0) : 0;
+  const query = new URLSearchParams({ limit: String(safeLimit), offset: String(safeOffset) });
   const payload = await getPayload(`/api/module2/investigations?${query}`, fetcher);
   if (!isInvestigationPage(payload)) throw new Module2ApiError("The investigation service returned an unexpected list response.");
   return payload;
@@ -58,8 +67,7 @@ export async function investigate(scanResult: ScanResult, fetcher: typeof fetch 
   }
   const payload: unknown = await response.json().catch(() => undefined);
   if (!response.ok) {
-    const detail = payload && typeof payload === "object" && "detail" in payload ? String(payload.detail) : "The investigation request failed.";
-    throw new Module2ApiError(detail, response.status);
+    throw new Module2ApiError(errorDetail(payload, "The investigation request failed."), response.status);
   }
   if (!isModule2Result(payload)) throw new Module2ApiError("The investigation service returned an unexpected response.", response.status);
   return payload;

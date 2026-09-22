@@ -7,6 +7,7 @@ export const navigationItems: readonly NavigationItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/scans/new", label: "New Scan" },
   { href: "/scans/history", label: "Scan History" },
+  { href: "/investigations", label: "Investigation Center" },
   { href: "/community", label: "Community Intelligence" },
   { href: "/incidents", label: "Incident Center" },
   { href: "/analytics", label: "Analytics" },
@@ -15,7 +16,7 @@ export const navigationItems: readonly NavigationItem[] = [
 
 export function getPageTitle(pathname: string): string {
   if (pathname === "/") {
-    return "Dashboard";
+    return "Investigation Center";
   }
 
   const currentItem = navigationItems.find((item) => item.href === pathname);
@@ -24,5 +25,7 @@ export function getPageTitle(pathname: string): string {
     return currentItem.label;
   }
 
-  return pathname.startsWith("/scans/") ? "Scan Result" : "TruthLensAI";
+  if (pathname.startsWith("/scans/")) return "Scan Result";
+  if (pathname.startsWith("/investigations/")) return "Investigation Detail";
+  return "TruthLensAI";
 }

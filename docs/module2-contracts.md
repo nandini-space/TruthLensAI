@@ -169,3 +169,93 @@ state is retained in the nested incident without a transition. Report generation
 is deterministic, side-effect free, and uses an independent UTC-aware generation
 timestamp (optionally supplied for deterministic callers); it performs no
 detection, intelligence query, lifecycle update, or response action.
+
+## STIX 2.1 export
+
+`backend.reports.stix.export_stix_bundle(evidence_pack, incident=None,
+forensic_report=None)` returns a valid STIX 2.1 bundle using the `stix2`
+library. Malicious or suspicious supported indicators map to STIX Indicator
+patterns for IPv4 addresses, domains, URLs, email addresses, and valid MD5,
+SHA-1, SHA-256, or SHA-512 hashes. Phone and `other` indicators are not
+fabricated as unrelated STIX objects; unknown and unavailable intelligence also
+does not create a malicious or suspicious STIX Indicator.
+
+When supplied, an Incident becomes a STIX Incident with its TruthLensAI identity
+in an external reference and its lifecycle/severity context in labels. It is
+linked with `related-to` relationships only to exported indicator objects. A
+supplied forensic report becomes a STIX Report that references the exported
+objects. Export validates supplied scan/evidence/incident relationships, is
+read-only, and performs no network request, detection, lifecycle transition, or
+response action.
+
+## IOC response decisions and dry-run blocking
+
+`backend.response.decision.decide_response(evidence_pack, incident=None)`
+creates one deterministic `ResponseDecision` per unique normalized indicator.
+The only actions are `no_action` and `block`, and every Task 11 decision uses
+explicit `dry_run` mode. IP, domain, URL, and hash indicators are eligible only
+when existing intelligence explicitly reports `malicious`. Suspicious, benign,
+unknown, unavailable, unsupported email/phone/other indicators, and conflicting
+unaggregated provider results remain `no_action`; existing aggregator results
+are used when present.
+
+`backend.response.blocker.DryRunIOCBlocker` receives an already-created
+decision and never makes a policy decision itself. For `block`, it returns
+`would_block=true` and `executed=false`; for `no_action`, it returns both as
+false. DRY_RUN is not an actual block: this layer makes no firewall, DNS,
+endpoint, network, database, or external-service change.
+
+## Response audit / action records
+
+`backend.response.audit.build_action_record(decision, incident=None)` creates
+an in-memory `ActionRecord` from a Task 11 `ResponseDecision`, optionally
+checking and attaching the matching incident. It deep-copies the decision's
+Indicator, action, reason, mode, and scan identity, assigns a UUID action ID,
+and records a UTC-aware timestamp. `build_action_records(decisions, ...)`
+preserves input order and returns one record per decision.
+
+Action records describe response intent, not execution. A dry-run `block` has
+`would_execute=true`, `executed=false`, and `not_executed` status; `no_action`
+has `would_execute=false`, `executed=false`, and `skipped` status. Task 12
+rejects any record marked executed and makes no persistence, network, firewall,
+DNS, endpoint, or external-service change. The record is the in-memory boundary
+for a future adapter, which is intentionally not implemented here.
+
+## Module 2 orchestrator
+
+`backend.module2.orchestrator.run_module2_investigation(scan_result, ...)`
+coordinates the existing pipeline: ScanResult -> IOC extraction -> injected (or
+default configured) providers -> aggregation -> evidence -> incident -> forensic
+report -> STIX -> response decisions -> dry-run action records. It returns a
+typed `Module2Result` containing each major snapshot, including raw provider
+results and aggregated intelligence.
+
+Provider exceptions are isolated as provider-neutral error results so other
+providers and indicators continue to aggregation. A supplied incident is reused
+only when its scan/evidence identity matches the newly generated evidence; its
+lifecycle state is never changed. The orchestrator performs no direct network,
+persistence, response, or security action. Provider network behavior remains
+inside the pre-existing provider adapters, and all generated action records stay
+dry-run with `executed=false`.
+
+## Module 2 API Boundary
+
+`POST /api/module2/investigate` is the in-memory integration boundary for the
+Module 2 workflow. It accepts the canonical `ScanResult`, relies on FastAPI and
+the existing Pydantic contract for request validation, delegates business logic
+to `run_module2_investigation`, and returns the existing `Module2Result`.
+
+```
+HTTP Request
+    ↓
+ScanResult validation
+    ↓
+Module 2 Orchestrator
+    ↓
+Module2Result
+    ↓
+HTTP Response
+```
+
+The endpoint adds no persistence. Response actions remain dry-run only; it does
+not perform a real security-system action.

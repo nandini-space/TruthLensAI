@@ -6,3 +6,4 @@ Pillow
 pytesseract
 faster-whisper
 mutagen
+stix2==3.0.2

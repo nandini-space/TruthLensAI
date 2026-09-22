@@ -12,10 +12,12 @@ that envelope in Telegram. It does not import backend classes, run detection,
 extract IOCs, enrich intelligence, create incidents, generate reports, or
 execute response actions.
 
-The backend currently has **no authentication or authorization mechanism**.
-Module 3C therefore sends no `Authorization` header today. Before exposing the
-service beyond a trusted network, authentication, authorization, and a Telegram
-webhook-verification policy are required from the backend/infrastructure owner.
+The backend supports optional shared-service authentication. When
+`TRUTHLENSAI_API_KEY` is configured, n8n must send it as
+`X-TruthLens-API-Key` on every API call other than `/health`; store it in an
+n8n credential, never in a workflow export. This is a service-to-service
+control, not user authorization. Before public exposure, deploy TLS, network
+restrictions, gateway-level rate limits, and Telegram webhook verification.
 
 ## Existing API surface
 
@@ -254,7 +256,7 @@ These are not implemented and must not be faked by Module 3C:
 | `GET /incidents/{incident_id}/report` | Missing; report is nested in `Module2Result`. |
 | `POST /incidents/{incident_id}/actions` | Missing and inappropriate for current dry-run-only response behavior. |
 | Feedback / mark-safe / report-scam mutations | Missing. |
-| Backend authentication/authorization | Missing. |
+| Backend authentication/authorization | Optional shared service key exists; deployment still requires network and webhook controls. |
 
 ## Communication flow
 

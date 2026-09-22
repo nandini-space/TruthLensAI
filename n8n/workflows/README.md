@@ -5,6 +5,10 @@ It receives a Telegram message, uses the existing Module 1 HTTP API for text
 and URLs, converts its response to the Module 3C envelope, and sends a readable
 Telegram reply. It never calls Module 2.
 
+It is **not a production Telegram workflow**: it has no per-user/chat
+conversation state or callback ownership validation, and supports only text and
+URLs in real mode. See `docs/integration-audit.md` before activation.
+
 ```text
 Telegram → n8n → Module 1 (/scan/text or /scan/url) → Module 3C envelope → Telegram
 ```

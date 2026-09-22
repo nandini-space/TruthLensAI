@@ -2,7 +2,11 @@
 
 ## 1. Project purpose
 
-TruthLensAI is a planned AI-powered platform for detecting and responding to potential threats across text, URLs/domains, images/screenshots, audio/voice, and video. This document describes the intended architecture only; no detection engines or external integrations are implemented in this initial scaffold.
+TruthLensAI is an AI-powered platform for assessing potential threats across
+text, URLs/domains, images/screenshots, audio/voice, and video. The current
+backend implements the canonical Module 1 → Module 2 contract and a
+provider-neutral, dry-run investigation workflow; frontend and automation
+integration remain future work.
 
 ## 2. Workflow
 
@@ -16,11 +20,17 @@ The platform follows a single operational flow:
 
 ## 3. Module 1: Multimodal Detection
 
-Future detection capabilities belong under `backend/detection/`. This module will provide modality-specific processing boundaries for text, URLs/domains, images/screenshots, audio/voice, and video. OCR, audio transcription, video frame/audio processing, and multimodal fusion are future work and are not implemented.
+`backend/detection/` provides modality-specific detection boundaries that
+produce the canonical `ScanResult`. Module 2 consumes only that public contract,
+not detection internals or storage.
 
 ## 4. Module 2: Threat Intelligence + Investigation
 
-`backend/intelligence/` is reserved for threat-intelligence adapters and normalization. `backend/incidents/` is reserved for future investigation-facing coordination. VirusTotal, community intelligence, STIX 2.1 sharing, and incident logic are deliberately outside the current implementation.
+`backend/module2/` orchestrates existing intelligence normalization, evidence,
+incident, report, STIX, response-audit, and repository components. Provider
+adapters are optional and failures stay provider-neutral; response decisions are
+strictly dry-run. The API supports investigation creation plus read-only single
+and paginated persisted-result retrieval.
 
 ## 5. Module 3: Dashboard + Telegram
 
@@ -32,8 +42,14 @@ Future modules should exchange explicit, versioned contracts for input metadata,
 
 ## 7. API boundaries
 
-The FastAPI application in `backend/` is the service boundary for future clients and automation. At present, it exposes only `GET /health`. Future routes should validate requests, return documented contracts, and keep detection, intelligence, investigation, reporting, and integration concerns within their respective modules.
+The FastAPI application exposes `GET /health`, `POST /api/module2/investigate`,
+`GET /api/module2/investigations/{scan_id}`, and
+`GET /api/module2/investigations`. Routes validate contracts, use the repository
+boundary for persistence, and sanitize repository failures.
 
 ## 8. Database responsibilities
 
-Supabase is planned as the persistence layer for future application data, including input metadata, findings, analyst-facing evidence, and audit-oriented records. No Supabase client, schema, migrations, or tables are included in this initial structure.
+Supabase is an optional persistence adapter for completed Module 2 snapshots.
+The migrations in `supabase/migrations/` define the investigations table with a
+unique scan ID, JSONB payload, and collection timestamp for deterministic
+history ordering. Tests use only deterministic in-memory or fake clients.

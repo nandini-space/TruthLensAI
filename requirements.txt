@@ -1,4 +1,5 @@
 fastapi
+python-multipart
 uvicorn
 pydantic>=2,<3
 httpx>=0.28,<1
@@ -7,3 +8,4 @@ pytesseract
 faster-whisper
 mutagen
 stix2==3.0.2
+supabase>=2,<3

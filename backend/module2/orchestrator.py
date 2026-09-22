@@ -23,6 +23,7 @@ from backend.intelligence.models import (
 )
 from backend.intelligence.virustotal import VirusTotalProvider
 from backend.models.schemas import ContractModel, ScanResult
+from backend.module2.repository import Module2InvestigationRepository
 from backend.reports.forensic import build_forensic_report
 from backend.reports.models import ForensicReport
 from backend.reports.stix import export_stix_bundle
@@ -62,6 +63,7 @@ def run_module2_investigation(
     incident: Incident | None = None,
     recorded_at=None,
     generated_at=None,
+    repository: Module2InvestigationRepository | None = None,
 ) -> Module2Result:
     """Run the established Module 2 workflow without adding policy or side effects."""
 
@@ -87,7 +89,7 @@ def run_module2_investigation(
     records = build_action_records(
         decisions, incident=incident_snapshot, recorded_at=recorded_at
     )
-    return Module2Result(
+    result = Module2Result(
         scan_result=scan_snapshot,
         indicators=indicators,
         provider_results=provider_results,
@@ -100,6 +102,9 @@ def run_module2_investigation(
         response_decisions=decisions,
         action_records=records,
     )
+    if repository is not None:
+        repository.save(result)
+    return result
 
 
 def _validated_scan_snapshot(scan_result: ScanResult) -> ScanResult:

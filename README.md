@@ -8,7 +8,12 @@ Its core workflow is:
 
 **DETECT → EXPLAIN → ENRICH → INVESTIGATE → RESPOND**
 
-This repository currently contains only the initial project structure, documentation, and a minimal backend health endpoint. Detection, intelligence integrations, orchestration, database schema, and user interfaces are intentionally not implemented yet.
+The backend implements the canonical `ScanResult` handoff, deterministic
+multimodal detection boundaries, and Module 2 investigation: IOC extraction,
+provider-neutral intelligence aggregation, evidence, incidents, forensic
+reports, STIX export, dry-run response records, and optional Supabase-backed
+investigation persistence. The frontend and n8n workflow directories remain
+placeholders.
 
 ## Project layout
 
@@ -18,12 +23,16 @@ This repository currently contains only the initial project structure, documenta
 - `benchmark/` — Reserved for evaluation assets and benchmarks.
 - `docs/` — Reserved for supporting project documentation.
 
-## Backend health check
+## Local backend setup
 
-From the repository root, install FastAPI and an ASGI server, then run:
+From the repository root, create and activate a Python virtual environment,
+then install the declared dependencies:
 
 ```bash
+python -m venv .venv
+# Activate .venv using your platform's standard command.
 pip install -r requirements.txt
+python -m unittest discover
 uvicorn backend.main:app --reload
 ```
 
@@ -33,7 +42,27 @@ uvicorn backend.main:app --reload
 {"status":"ok","service":"TruthLensAI"}
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the intended system boundaries.
+Tests run fully offline and do not require Supabase or VirusTotal credentials.
+Copy `.env.example` only when configuring optional runtime integrations; values
+are read from environment variables and must not be committed.
+
+The current settings layer recognizes `APP_ENV`, `APP_HOST`, `APP_PORT`,
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and
+`VIRUSTOTAL_API_KEY`. The service-role key is used only by the optional Supabase
+repository; no API endpoint returns configuration values.
+
+## Module 2 API
+
+- `POST /api/module2/investigate` runs Module 2 for a canonical `ScanResult`.
+- `GET /api/module2/investigations/{scan_id}` retrieves one persisted result.
+- `GET /api/module2/investigations?limit=20&offset=0` returns read-only history.
+
+Persistence is enabled only when both `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` are configured and the migrations in
+`supabase/migrations/` have been applied. Both retrieval endpoints are
+read-only; response actions remain dry-run only. See
+[Module 2 contracts](docs/module2-contracts.md) and
+[ScanResult contract](docs/scan-result-contract.md) for API and data details.
 
 ## Local image OCR
 

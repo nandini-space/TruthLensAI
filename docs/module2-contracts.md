@@ -257,5 +257,123 @@ Module2Result
 HTTP Response
 ```
 
-The endpoint adds no persistence. Response actions remain dry-run only; it does
-not perform a real security-system action.
+When no persistence configuration is present, the endpoint remains in-memory.
+When both existing Supabase settings are configured, it injects the repository
+boundary into the orchestrator; the route itself makes no direct database call.
+Response actions remain dry-run only; it does not perform a real
+security-system action.
+
+`GET /api/module2/investigations/{scan_id}` retrieves an already-persisted
+`Module2Result` through that repository boundary. `scan_id` is a required
+canonical UUID path parameter. On success it returns the existing complete
+`Module2Result`, including its intelligence, evidence, incident, forensic
+report, STIX bundle, and response/action-record snapshots. A valid but missing
+ID returns HTTP 404 with a small sanitized error response; an invalid UUID is
+rejected by the normal FastAPI path-parameter validation response. If
+persistence is unconfigured or unavailable, it returns a sanitized HTTP 503.
+
+This retrieval endpoint is strictly read-only: it performs only validation,
+repository retrieval, and response serialization. It never re-runs the Module
+2 pipeline, calls intelligence providers, extracts IOCs, creates or updates an
+incident, generates reports or STIX, makes response decisions, creates action
+records, or writes repository state.
+
+`GET /api/module2/investigations` lists existing persisted investigations in a
+small pagination envelope: `{ "items": [...], "limit": 20, "offset": 0,
+"count": 0 }`. It accepts `limit` (default 20, minimum 1, maximum 100) and
+`offset` (default 0, minimum 0); invalid values use FastAPI's normal validation
+response. Empty history returns an empty `items` list and `count: 0`.
+
+Pages are ordered by `EvidencePack.collected_at` descending (newest first), then
+canonical `scan_id` descending for equal collection times. The repository uses
+this ordering and applies `limit`/`offset`; Supabase performs the ordering and
+range query in the database. A repository failure returns the same sanitized
+HTTP 503 response as single-investigation retrieval. This endpoint is strictly
+read-only and does not execute any Module 2 pipeline stage or repository write.
+Filtering, search, user-selectable sorting, deletion, and update operations are
+not part of this API.
+
+## Verified investigation lifecycle
+
+The offline integration lifecycle is verified as `POST /investigate` → complete
+Module 2 investigation → repository persistence → `GET /investigations/{scan_id}`
+→ `GET /investigations`. It verifies that canonical scan, evidence, incident,
+report, response/action, intelligence, and STIX identities/logical values are
+preserved across persistence and both retrieval forms. Repository snapshots keep
+later mutations to original, single-retrieval, or history-list values from
+altering stored investigations. Both GET endpoints are verified read-only: they
+do not invoke investigation, providers, artifact generation, response logic, or
+repository writes.
+
+## Module 2 Repository Boundary
+
+`backend.module2.repository.Module2InvestigationRepository` is a provider-neutral
+boundary for saving and retrieving completed `Module2Result` snapshots. `save`
+rejects duplicate canonical `scan_id` values rather than overwriting an existing
+investigation. Lookup by scan ID (or incident ID) returns `None` when no result
+is stored. Saved and retrieved values are independent deep-copy snapshots, so
+caller mutations cannot affect repository state or later retrievals.
+
+`list_investigations(limit=20, offset=0)` returns a bounded page of the same
+independent snapshots, using the documented collection-time/scan-ID ordering.
+Both repository implementations reject invalid or unbounded pagination values.
+
+The repository preserves the existing scan, evidence, incident, report, and
+action identities and rejects inconsistent result identities. Its
+`InMemoryModule2Repository` implementation is deterministic and test-only: it
+performs no external calls, database access, filesystem persistence, or
+configuration lookup. The optional Supabase implementation uses the same
+contract for configured runtime persistence.
+
+## Supabase Repository Implementation
+
+`SupabaseModule2Repository` implements the same repository contract for a
+production persistence adapter. It uses the existing `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` only when constructed through `from_environment`;
+credentials are never stored in payloads or returned in repository errors. The
+client may also be injected for application wiring and tests.
+
+The required `public.module2_investigations` table is defined and evolved by the
+`supabase/migrations/` scripts. It stores a
+unique canonical `scan_id`, optional unique `incident_id`, and one JSONB
+`payload` containing the complete serialized `Module2Result`, plus the existing
+evidence collection timestamp used for database-level page ordering. Apply that SQL
+through the Supabase SQL editor or the deployment migration workflow before
+using this repository.
+
+Serialization preserves the existing nested contracts, UUIDs, timestamps,
+enums, response/action records, and the existing STIX bundle. Duplicate insert
+failures become `DuplicateInvestigationError`; missing lookups return `None`;
+malformed stored data and client failures raise repository-level errors without
+revealing credentials. Supabase is not a fallback to the in-memory test store.
+The orchestrator and API integrate it only when both required existing
+Supabase settings are configured.
+
+## Optional Persistence Integration
+
+`run_module2_investigation(..., repository=...)` accepts the existing
+`Module2InvestigationRepository` protocol. Without a repository it retains its
+non-persistent behavior. With one, it first completes every investigation stage
+and constructs the final `Module2Result`, then saves that complete result once
+before returning it. Repository failures propagate; they are never replaced by
+a successful result or an in-memory fallback.
+
+The API provides a configured `SupabaseModule2Repository` only when both
+existing Supabase settings are present. Duplicate saves become a sanitized HTTP
+409 response and repository availability failures a sanitized HTTP 503 response.
+The orchestrator remains provider-neutral and has no Supabase dependency.
+
+## Security and Failure Hardening
+
+Module 2 API request validation rejects malformed canonical scan payloads before
+investigation. Existing provider failures, exceptions, and malformed provider
+returns are isolated into non-benign provider-neutral results, allowing other
+providers to contribute. Invalid provider failure/reputation combinations and
+cross-artifact identity mismatches fail closed through the existing contracts.
+
+Repository setup, retrieval, listing, unexpected persistence failures, and a
+retrieval result with the wrong canonical scan identity return sanitized API
+errors without database details or secrets. STIX export remains conservative and
+does not serialize provider credentials; response decisions remain dry-run and
+their blocker results are never executed. Persisted and retrieved snapshots are
+isolated from caller mutation, and both retrieval endpoints remain read-only.

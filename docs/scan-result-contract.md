@@ -33,3 +33,21 @@ Module 2 can rely on this contract for scan identity, detection context, source
 provenance, and evidence reference. It must not mutate its meaning or add
 enrichment, incident, evidence, report, VirusTotal, community-intelligence, or
 STIX fields to `ScanResult`.
+
+## Module 1 → Module 2 Integration
+
+```
+Module 1
+   ↓
+ScanResult
+   ↓
+POST /api/module2/investigate
+   ↓
+Module 2
+```
+
+`ScanResult` is the sole handoff contract. Module 1 owns detection, while
+Module 2 owns enrichment, investigation, and dry-run response; Module 1 does
+not need provider, aggregation, report, STIX, or action-record details. Module
+2 must not mutate the original detection result, and propagates its `scan_id`
+through the investigation pipeline.

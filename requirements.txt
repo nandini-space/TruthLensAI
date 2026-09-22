@@ -7,3 +7,4 @@ pytesseract
 faster-whisper
 mutagen
 stix2==3.0.2
+supabase>=2,<3

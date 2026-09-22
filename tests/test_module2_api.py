@@ -124,6 +124,16 @@ class Module2ApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok", "service": "TruthLensAI"})
 
+    def test_openapi_documents_existing_module2_error_responses(self) -> None:
+        paths = self.client.get("/openapi.json").json()["paths"]
+        self.assertTrue({"409", "422", "500", "503"}.issubset(
+            paths["/api/module2/investigate"]["post"]["responses"]
+        ))
+        self.assertIn("503", paths["/api/module2/investigations"]["get"]["responses"])
+        self.assertTrue({"404", "503"}.issubset(
+            paths["/api/module2/investigations/{scan_id}"]["get"]["responses"]
+        ))
+
 
 if __name__ == "__main__":
     unittest.main()

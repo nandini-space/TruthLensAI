@@ -3,6 +3,7 @@ python-multipart
 uvicorn
 pydantic>=2,<3
 httpx>=0.28,<1
+python-telegram-bot>=22,<23
 Pillow
 pytesseract
 faster-whisper

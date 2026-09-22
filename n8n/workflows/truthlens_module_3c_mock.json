@@ -1,0 +1,156 @@
+{
+  "name": "TruthLensAI Module 3C - Telegram Mock Scan",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      },
+      "id": "9bc76af4-b6f7-4c35-a369-cd87aa3c1001",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1000,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $json.message ?? $json;\nconst chat = message.chat ?? {};\nconst sender = message.from ?? {};\nlet content = '';\nlet attachmentName = null;\nlet preliminaryType = 'unknown';\n\nif (typeof message.text === 'string') {\n  content = message.text.trim();\n  preliminaryType = content ? 'text' : 'unknown';\n} else if (Array.isArray(message.photo) && message.photo.length > 0) {\n  preliminaryType = 'image';\n  attachmentName = 'Telegram image attachment';\n  content = '[Telegram image attachment]';\n} else if (message.audio) {\n  preliminaryType = 'audio';\n  attachmentName = message.audio.file_name ?? 'Telegram audio attachment';\n  content = '[Telegram audio attachment]';\n} else if (message.video) {\n  preliminaryType = 'video';\n  attachmentName = message.video.file_name ?? 'Telegram video attachment';\n  content = '[Telegram video attachment]';\n}\n\nreturn [{\n  json: {\n    source: 'telegram',\n    chat_id: chat.id != null ? String(chat.id) : null,\n    user_id: sender.id != null ? String(sender.id) : null,\n    message_id: message.message_id != null ? String(message.message_id) : null,\n    timestamp: message.date != null ? new Date(message.date * 1000).toISOString() : null,\n    content,\n    attachment_name: attachmentName,\n    preliminary_type: preliminaryType\n  }\n}];"
+      },
+      "id": "9bc76af4-b6f7-4c35-a369-cd87aa3c1002",
+      "name": "Normalize Telegram Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $json;\nconst isHttpUrl = /^https?:\\/\\/[^\\s]+$/i.test(event.content);\nconst input_type = event.preliminary_type === 'text' && isHttpUrl\n  ? 'url'\n  : event.preliminary_type;\n\nreturn [{ json: { ...event, input_type } }];"
+      },
+      "id": "9bc76af4-b6f7-4c35-a369-cd87aa3c1003",
+      "name": "Detect Input Type",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $json;\nconst request_id = `mock-request-${event.message_id ?? 'unknown'}`;\nconst supportedTypes = new Set(['text', 'url', 'image', 'audio', 'video']);\n\nif (!event.chat_id || !supportedTypes.has(event.input_type) || !event.content) {\n  return [{\n    json: {\n      contract_version: '1.0',\n      request_id,\n      status: 'error',\n      error: {\n        code: 'validation_error',\n        message: 'Please send text, a URL, image, audio, or video to test the bot.',\n        retryable: false\n      },\n      chat_id: event.chat_id\n    }\n  }];\n}\n\ntry {\n  return [{\n    json: {\n      contract_version: '1.0',\n      request_id,\n      status: 'success',\n      source: { type: event.input_type, value: event.content },\n      scan: {\n        scan_id: '00000000-0000-4000-8000-000000000001',\n        risk_score: 72,\n        severity: 'high',\n        threat_type: 'phishing',\n        confidence: 0.91,\n        signals: [\n          { id: 'suspicious_wording', summary: 'Mock suspicious wording signal', source: 'module_3c_mock' },\n          { id: 'credential_request', summary: 'Mock credential request signal', source: 'module_3c_mock' }\n        ],\n        explanation: 'Mock detection response for integration testing. No TruthLensAI backend was called.',\n        recommendation: 'Do not provide credentials.'\n      },\n      threat_intelligence: { available: false, status: 'not_requested', iocs: [], enrichment: [] },\n      incident: { incident_id: null, status: null, report_id: null },\n      actions: [],\n      capabilities: { why_suspicious: true, what_to_do: true, full_report: false, feedback: false },\n      chat_id: event.chat_id\n    }\n  }];\n} catch (error) {\n  return [{\n    json: {\n      contract_version: '1.0',\n      request_id,\n      status: 'error',\n      error: { code: 'mock_processing_failed', message: 'The test scan could not be prepared. Please try again.', retryable: true },\n      chat_id: event.chat_id\n    }\n  }];\n}"
+      },
+      "id": "9bc76af4-b6f7-4c35-a369-cd87aa3c1004",
+      "name": "Mock TruthLensAI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -280,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $json;\nlet text;\n\nif (result.status !== 'success') {\n  text = `TruthLensAI Test Scan\\n\\n${result.error?.message ?? 'The test scan could not be completed.'}`;\n} else {\n  const scan = result.scan;\n  const inputType = result.source.type.charAt(0).toUpperCase() + result.source.type.slice(1);\n  const confidence = scan.confidence == null ? 'Not assessed' : `${Math.round(scan.confidence * 100)}%`;\n  const riskScore = scan.risk_score == null ? 'Not assessed' : String(scan.risk_score);\n  text = [\n    'TruthLensAI Test Scan (MOCK)',\n    '',\n    `Input Type: ${inputType}`,\n    `Risk Score: ${riskScore}`,\n    `Severity: ${scan.severity.toUpperCase()}`,\n    `Threat Type: ${scan.threat_type.toUpperCase()}`,\n    `Confidence: ${confidence}`,\n    '',\n    'Explanation:',\n    scan.explanation,\n    '',\n    'Recommendation:',\n    scan.recommendation\n  ].join('\\n');\n}\n\nreturn [{ json: { chat_id: result.chat_id, text } }];"
+      },
+      "id": "9bc76af4-b6f7-4c35-a369-cd87aa3c1005",
+      "name": "Format Telegram Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "id": "9bc76af4-b6f7-4c35-a369-cd87aa3c1006",
+      "name": "Send Telegram Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        200,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Telegram Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Telegram Input": {
+      "main": [
+        [
+          {
+            "node": "Detect Input Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Input Type": {
+      "main": [
+        [
+          {
+            "node": "Mock TruthLensAI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mock TruthLensAI Response": {
+      "main": [
+        [
+          {
+            "node": "Format Telegram Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Telegram Response": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9bc76af4-b6f7-4c35-a369-cd87aa3c1007",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

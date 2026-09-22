@@ -22,6 +22,8 @@ class ApiConfig:
             if origin.strip()
         )
     )
+    api_key: str | None = field(default_factory=lambda: os.getenv("TRUTHLENSAI_API_KEY") or None)
+    rate_limit_per_minute: int = field(default_factory=lambda: max(0, int(os.getenv("TRUTHLENSAI_RATE_LIMIT_PER_MINUTE", "0"))))
 
 
 @dataclass(frozen=True, slots=True)

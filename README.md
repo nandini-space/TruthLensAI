@@ -51,6 +51,26 @@ The current settings layer recognizes `APP_ENV`, `APP_HOST`, `APP_PORT`,
 `VIRUSTOTAL_API_KEY`. The service-role key is used only by the optional Supabase
 repository; no API endpoint returns configuration values.
 
+## Integration map
+
+```text
+Web dashboard -> FastAPI /scan/* -> Module 1 detection -> displayed HTTP result
+n8n Telegram workflow -> FastAPI /scan/* -> normalized Telegram response
+Web investigation dashboard -> FastAPI /api/module2/investigations -> Module 2 snapshots
+```
+
+The web scan form calls existing Module 1 routes. n8n is the production
+Telegram update owner; `module_3c/telegram_bot` is prototype/reference only.
+
+**Module 2 integration blocked:** Module 1 HTTP responses are not canonical
+`backend.models.schemas.ScanResult` values. Required provenance and safe input
+reference fields are not present, so the server intentionally does not invent a
+converter. A canonical upstream handoff is required before a scan result can
+start Module 2. `GET /ready` reports safe component/configuration status.
+
+See [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md) for implemented
+controls and operating limitations.
+
 ## Module 2 API
 
 - `POST /api/module2/investigate` runs Module 2 for a canonical `ScanResult`.

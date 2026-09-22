@@ -14,28 +14,22 @@ export function SignalList({ signals }: SignalListProps) {
   return (
     <ul className="space-y-3">
       {signals.map((signal, index) => (
-        <li key={`${signal.name}-${signal.source}-${index}`} className="rounded-lg border border-slate-200 p-4">
+        <li key={`${signal.code}-${signal.source}-${index}`} className="rounded-lg border border-slate-200 p-4">
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-slate-600">Signal</dt>
-              <dd className="mt-1 break-words font-medium text-slate-950">{signal.name}</dd>
+              <dd className="mt-1 break-words font-medium text-slate-950">{signal.code}</dd>
             </div>
             <div>
-              <dt className="text-slate-600">Value</dt>
-              <dd className="mt-1 break-words font-medium text-slate-950">{signal.value}</dd>
+              <dt className="text-slate-600">Description</dt>
+              <dd className="mt-1 break-words font-medium text-slate-950">{signal.description}</dd>
             </div>
             <div>
               <dt className="text-slate-600">Source</dt>
               <dd className="mt-1 break-words text-slate-800">{signal.source}</dd>
             </div>
-            {signal.confidence !== null ? (
-              <div>
-                <dt className="text-slate-600">Confidence</dt>
-                <dd className="mt-1 text-slate-800">{signal.confidence}</dd>
-              </div>
-            ) : null}
           </dl>
-          <MetadataList metadata={signal.metadata} />
+          <MetadataList metadata={signal.details} />
         </li>
       ))}
     </ul>

@@ -7,41 +7,47 @@ export type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
-/** Input modality supported by the canonical Module 1 scan result contract. */
+/** Input modality supported by the Module 1 HTTP scan result contract. */
 export type ScanModality = "text" | "url" | "image" | "audio" | "video";
 
-/** Detection severity, not an incident lifecycle status. */
-export type ScanSeverity = "low" | "medium" | "high" | "critical";
+/** Detection severity returned by Module 1, not an incident lifecycle status. */
+export type ScanSeverity = "unknown" | "low" | "moderate" | "high" | "critical";
 
 export interface DetectionSignal {
-  name: string;
-  value: string;
+  code: string;
+  description: string;
   source: string;
-  confidence: number | null;
-  metadata: Record<string, JsonValue>;
+  details: Record<string, JsonValue>;
 }
 
 export interface ExtractedEntity {
-  entity_type: string;
+  kind: string;
   value: string;
-  normalized_value: string | null;
-  confidence: number | null;
-  metadata: Record<string, JsonValue>;
+  context: string | null;
 }
 
 /**
- * Frontend representation of the Module 1 canonical detection output.
+ * Frontend representation of the existing Module 1 HTTP response.
  * UUID and date-time values are serialized as strings across the HTTP boundary.
  */
 export interface ScanResult {
   scan_id: string;
-  modality: ScanModality;
-  risk_score: number;
+  input_type: ScanModality;
+  risk_score: number | null;
   severity: ScanSeverity;
-  confidence: number;
+  confidence: number | null;
   threat_type: string;
   signals: DetectionSignal[];
   explanation: string;
-  extracted_entities: ExtractedEntity[];
+  entities: {
+    urls: string[];
+    domains: string[];
+    email_addresses: string[];
+    phone_numbers: string[];
+    usernames: string[];
+    indicators: ExtractedEntity[];
+  };
   recommendation: string;
+  metadata: Record<string, JsonValue>;
+  created_at: string;
 }

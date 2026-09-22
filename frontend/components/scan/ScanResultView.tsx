@@ -19,7 +19,7 @@ export function ScanResultView({ result }: ScanResultViewProps) {
       <RiskSummary result={result} />
       <ThreatInformation result={result} />
       <ExplanationCard explanation={result.explanation} />
-      <ExtractedEntities entities={result.extracted_entities} />
+      <ExtractedEntities entities={result.entities} />
       <RecommendationCard recommendation={result.recommendation} />
     </article>
   );

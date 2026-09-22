@@ -6,7 +6,8 @@ interface RiskSummaryProps {
 
 const severityStyles: Record<ScanSeverity, string> = {
   low: "bg-emerald-50 text-emerald-800",
-  medium: "bg-amber-50 text-amber-800",
+  moderate: "bg-amber-50 text-amber-800",
+  unknown: "bg-slate-100 text-slate-700",
   high: "bg-orange-50 text-orange-800",
   critical: "bg-red-50 text-red-800",
 };
@@ -20,7 +21,7 @@ export function RiskSummary({ result }: RiskSummaryProps) {
       <dl className="mt-4 grid gap-4 sm:grid-cols-3">
         <div>
           <dt className="text-sm text-slate-600">Risk score (0–100)</dt>
-          <dd className="mt-1 text-2xl font-semibold text-slate-950">{result.risk_score}</dd>
+          <dd className="mt-1 text-2xl font-semibold text-slate-950">{result.risk_score ?? "Not assessed"}</dd>
         </div>
         <div>
           <dt className="text-sm text-slate-600">Severity</dt>
@@ -32,7 +33,7 @@ export function RiskSummary({ result }: RiskSummaryProps) {
         </div>
         <div>
           <dt className="text-sm text-slate-600">Confidence (0–1)</dt>
-          <dd className="mt-1 text-2xl font-semibold text-slate-950">{result.confidence}</dd>
+          <dd className="mt-1 text-2xl font-semibold text-slate-950">{result.confidence ?? "Not assessed"}</dd>
         </div>
       </dl>
     </section>

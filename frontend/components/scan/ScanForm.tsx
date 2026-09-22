@@ -4,11 +4,14 @@ import { useState, type FormEvent } from "react";
 
 import type { ScanModality } from "@/types/scan-result";
 import type { ScanSubmissionDraft } from "@/types/scan-submission";
+import type { ScanResult } from "@/types/scan-result";
+import { ScanSubmissionError, submitScan } from "@/services/scan-submission";
 
 import { FileScanInput } from "./FileScanInput";
 import { ScanTypeSelector } from "./ScanTypeSelector";
 import { TextScanInput } from "./TextScanInput";
 import { UrlScanInput } from "./UrlScanInput";
+import { ScanResultView } from "./ScanResultView";
 
 type FileModality = Exclude<ScanModality, "text" | "url">;
 
@@ -64,6 +67,8 @@ export function ScanForm() {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submissionNotice, setSubmissionNotice] = useState<string | null>(null);
+  const [result, setResult] = useState<ScanResult | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   function handleModalityChange(nextModality: ScanModality) {
     setModality(nextModality);
@@ -91,7 +96,7 @@ export function ScanForm() {
     clearFeedback();
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const draft = buildDraft(modality, text, url, file);
 
@@ -101,10 +106,10 @@ export function ScanForm() {
       return;
     }
 
-    setError(null);
-    setSubmissionNotice(
-      "Module 1 scan submission is not configured yet. Your input has not been sent or analyzed.",
-    );
+    setError(null); setSubmissionNotice(null); setResult(null); setSubmitting(true);
+    try { setResult(await submitScan(draft)); }
+    catch (reason) { setError(reason instanceof ScanSubmissionError ? reason.message : "Scan failed. Please try again."); }
+    finally { setSubmitting(false); }
   }
 
   const inputError = submissionNotice ? undefined : error ?? undefined;
@@ -114,7 +119,7 @@ export function ScanForm() {
       <div>
         <h2 className="text-2xl font-semibold tracking-tight text-slate-950">New Scan</h2>
         <p className="mt-2 text-sm text-slate-600">
-          Select an input type and provide content for future TruthLensAI analysis.
+          Select an input type and submit it to the TruthLensAI detection service.
         </p>
       </div>
 
@@ -145,10 +150,12 @@ export function ScanForm() {
 
       <button
         type="submit"
+        disabled={submitting}
         className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2"
       >
-        Start scan
+        {submitting ? "Scanning…" : "Start scan"}
       </button>
+      {result ? <ScanResultView result={result} /> : null}
     </form>
   );
 }
